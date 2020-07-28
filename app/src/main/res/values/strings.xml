@@ -1,6 +1,7 @@
 <resources>
-    <string name="app_name">ddFileDelete</string>
-    <string name="reset">重置</string>
+    <string name="app_name">钉钉清理助手</string>
+    <string name="reset">重新开始</string>
     <string name="logon">Log已打开</string>
     <string name="logoff">Log已关闭</string>
+    <string name="mode">选择模式:</string>
 </resources>

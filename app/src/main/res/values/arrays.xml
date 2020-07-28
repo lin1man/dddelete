@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="mode">
+        <item>我创建的</item>
+    </string-array>
+    <string-array name="mode1">
+        <item>我创建的</item>
+        <item>我加入的</item>
+        <item>消息</item>
+    </string-array>
+</resources>

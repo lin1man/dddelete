@@ -26,6 +26,7 @@ public class HandlerService extends IntentService {
     private static boolean is_need_recycle = false;
     private static boolean deleteAllDone = false;
     private static int skip_recycle = 0;
+    private static int work_mode = utils.n_mode_my_group;
 
     static {
         rightMenuDesc.add("聊天设置");  //单人聊天
@@ -59,6 +60,7 @@ public class HandlerService extends IntentService {
             sharedPreferences.edit().putBoolean(utils.strResetConfigName, false).apply();
         }
         LogUtil.logable = sharedPreferences.getBoolean(utils.strLogSwitchConfigName, false);
+        work_mode = sharedPreferences.getInt(utils.strModeConfigName, utils.n_mode_my_group);
     }
 
     public static void startVithService(AccessibilityService service) {
@@ -112,6 +114,13 @@ public class HandlerService extends IntentService {
         boolean is_file_deleted = false;
         int gesture_count = 0;
         while (!is_done) {
+            if (isModeMyJoinGroup()) {
+                getUserName();
+                if (strUserName == null) {
+                    LogUtil.e(TAG, "等待获取用户名称！！");
+                    continue;
+                }
+            }
             //主界面聊系人 有发现则点击
             AccessibilityNodeInfo root = mService.getRootInActiveWindow();
             AccessibilityNodeInfo buttonContactNode = findButtonContactNode(root);
@@ -151,15 +160,30 @@ public class HandlerService extends IntentService {
                     AccessibilityNodeInfo child = myGroupTitleNode.getChild(0);
                     int childCount = child.getChildCount();
                     if (childCount == 2) {//必须为两个子节点  0为我创建的，1为我加入的
-                        AccessibilityNodeInfo child1 = child.getChild(0);//我创建的
-                        AccessibilityNodeInfo tvTextNode = findTvTextNode(child1);
-                        if (tvTextNode != null) {
-                            String nodeText = getNodeText(tvTextNode);
-                            boolean selected = tvTextNode.isSelected();
-                            if (nodeText.equals("我创建的")) {
-                                if (!selected) {
-                                    performActionClick(child1);//如果当前不是选中我创建的，则点击选中
-                                    utils.sleep(Timeout);
+                        if (isModeMyGroup()) {//我创建的模式
+                            AccessibilityNodeInfo child1 = child.getChild(0);//我创建的
+                            AccessibilityNodeInfo tvTextNode = findTvTextNode(child1);
+                            if (tvTextNode != null) {
+                                String nodeText = getNodeText(tvTextNode);
+                                boolean selected = tvTextNode.isSelected();
+                                if (nodeText.equals("我创建的")) {
+                                    if (!selected) {
+                                        performActionClick(child1);//如果当前不是选中我创建的，则点击选中
+                                        utils.sleep(Timeout);
+                                    }
+                                }
+                            }
+                        } else {//我加入的模式
+                            AccessibilityNodeInfo child1 = child.getChild(1);//我加入的
+                            AccessibilityNodeInfo tvTextNode = findTvTextNode(child1);
+                            if (tvTextNode != null) {
+                                String nodeText = getNodeText(tvTextNode);
+                                boolean selected = tvTextNode.isSelected();
+                                if (nodeText.equals("我加入的")) {
+                                    if (!selected) {
+                                        performActionClick(child1);//如果当前不是选中我加入的，则点击选中
+                                        utils.sleep(Timeout);
+                                    }
                                 }
                             }
                         }
@@ -167,7 +191,7 @@ public class HandlerService extends IntentService {
                 }
             }
             root = mService.getRootInActiveWindow();
-            AccessibilityNodeInfo viewPagerNode = findViewPagerNode(root);//我的群组页面 会含viewPager
+            AccessibilityNodeInfo viewPagerNode = findViewPagerNode(root);//我的群组、我加入的 页面  会含viewPager
             if (viewPagerNode != null) {
                 utils.sleep(Timeout * 3);
                 AccessibilityNodeInfo myGroupListNode = findMyGroupListNode(viewPagerNode);
@@ -256,7 +280,7 @@ public class HandlerService extends IntentService {
                             AccessibilityNodeInfo funcNameFileNode = findFuncNameFileNode(root);
                             if (funcNameFileNode != null) {//以文件搜索按键
                                 LogUtil.d(TAG, "以 文件 搜索控件找到文件按键，并点击");
-                                performActionClickParent(funcNameFileNode);
+                                performActionClick(funcNameFileNode.getParent());
                             } else {//遍历子控件
                                 AccessibilityNodeInfo fileNode = recursionFindNodeText(functionNodes, "文件");
                                 if (fileNode != null) {
@@ -363,79 +387,80 @@ public class HandlerService extends IntentService {
                             deleteAllDone = true;
                             setNeedRecycle(true);
                         } else {//有文件需要进行删除
-                            AccessibilityNodeInfo selectNode = findMutipleSelect(h5PcContainerNode);    //多选按键
-                            LogUtil.d(TAG, "查找多选按键：" + selectNode);
-                            if (selectNode != null) {
-                                performActionClick(selectNode);
-                                utils.sleep(Timeout);
-                                TimesCounter timesCounter = new TimesCounter(10);
-                                while (true) {
+                            if (isModeMyGroup()) {//在我创建的模式下才会有多选按键
+                                AccessibilityNodeInfo selectNode = findMutipleSelect(h5PcContainerNode);    //多选按键
+                                LogUtil.d(TAG, "查找多选按键：" + selectNode);
+                                if (selectNode != null) {
+                                    performActionClick(selectNode);
                                     utils.sleep(Timeout);
-                                    root = mService.getRootInActiveWindow();
-                                    if (root == null) {
-                                        globalActionBack();
-                                        return;
-                                    }
-                                    AccessibilityNodeInfo text1Node = findText1Node(root);//多选
-                                    if (text1Node != null) {
-                                        performActionClick(text1Node);
-                                        break;
-                                    } else {
-                                        if (timesCounter.check()) {
-                                            LogUtil.d(TAG, "多选查找超时");
+                                    TimesCounter timesCounter = new TimesCounter(10);
+                                    while (true) {
+                                        utils.sleep(Timeout);
+                                        root = getRootInActiveWindowException(true);
+                                        AccessibilityNodeInfo text1Node = findText1Node(root);//多选
+                                        if (text1Node != null) {
+                                            performActionClick(text1Node);
                                             break;
+                                        } else {
+                                            if (timesCounter.check()) {
+                                                LogUtil.d(TAG, "多选查找超时");
+                                                break;
+                                            }
                                         }
                                     }
-                                }
 
-                                TimesCounter counterDelete = new TimesCounter(10);
-                                while (true) {
-                                    LogUtil.d(TAG, "查找全选按键");
-                                    root = getRootInActiveWindowException(true);
-                                    h5PcContainerNode = findH5PcContainerNode(root);
-                                    if (h5PcContainerNode != null) {
-                                        AccessibilityNodeInfo selectAll = findSelectAllNode(h5PcContainerNode);//查找全选按键
-                                        LogUtil.d(TAG, "全选按键:" + selectAll);
-                                        if (selectAll != null) {
-                                            LogUtil.d(TAG, "全选按键:" + getNodeText(selectAll));
-                                            performActionClick(selectAll);  //点击全选按键
-                                            utils.sleep(Timeout);
+                                    TimesCounter counterDelete = new TimesCounter(10);
+                                    while (true) {
+                                        LogUtil.d(TAG, "查找全选按键");
+                                        root = getRootInActiveWindowException(true);
+                                        h5PcContainerNode = findH5PcContainerNode(root);
+                                        if (h5PcContainerNode != null) {
+                                            AccessibilityNodeInfo selectAll = findSelectAllNode(h5PcContainerNode);//查找全选按键
+                                            LogUtil.d(TAG, "全选按键:" + selectAll);
+                                            if (selectAll != null) {
+                                                LogUtil.d(TAG, "全选按键:" + getNodeText(selectAll));
+                                                performActionClick(selectAll);  //点击全选按键
+                                                utils.sleep(Timeout);
+                                            }
+                                            AccessibilityNodeInfo deleteNode = findDeleteNode(h5PcContainerNode);//查找删除按键
+                                            if (deleteNode != null) {
+                                                performActionClick(deleteNode);
+                                                utils.sleep(Timeout);
+                                                LogUtil.d(TAG, "点击删除");
+                                                break;
+                                            }
                                         }
-                                        AccessibilityNodeInfo deleteNode = findDeleteNode(h5PcContainerNode);//查找删除按键
-                                        if (deleteNode != null) {
-                                            performActionClick(deleteNode);
-                                            utils.sleep(Timeout);
-                                            LogUtil.d(TAG, "点击删除");
+                                        if (counterDelete.check()) {
+                                            LogUtil.d(TAG, "全选删除超时");
+                                            break;
+                                        }
+                                        utils.sleep(Timeout);
+                                    }
+                                    TimesCounter counter = new TimesCounter(10);
+                                    while (true) {
+                                        LogUtil.d(TAG, "查找确认删除");
+                                        utils.sleep(Timeout);
+                                        root = mService.getRootInActiveWindow();
+                                        AccessibilityNodeInfo button1Node = findButton1Node(root);//确认删除
+                                        if (button1Node != null) {
+                                            performActionClick(button1Node);
+                                            LogUtil.d(TAG, "点击确认删除");
+                                            deleteAllDone = true;
+                                            setNeedRecycle(true);
+                                            globalActionBack();
+                                            break;
+                                        }
+                                        if (counter.check()) {
+                                            deleteAllDone = true;   //确认删除超时则认为删除完成，返回
+                                            setNeedRecycle(true);
+                                            globalActionBack();
                                             break;
                                         }
                                     }
-                                    if (counterDelete.check()) {
-                                        LogUtil.d(TAG, "全选删除超时");
-                                        break;
-                                    }
-                                    utils.sleep(Timeout);
                                 }
-                                TimesCounter counter = new TimesCounter(10);
-                                while (true) {
-                                    LogUtil.d(TAG, "查找确认删除");
-                                    utils.sleep(Timeout);
-                                    root = mService.getRootInActiveWindow();
-                                    AccessibilityNodeInfo button1Node = findButton1Node(root);//确认删除
-                                    if (button1Node != null) {
-                                        performActionClick(button1Node);
-                                        LogUtil.d(TAG, "点击确认删除");
-                                        deleteAllDone = true;
-                                        setNeedRecycle(true);
-                                        globalActionBack();
-                                        break;
-                                    }
-                                    if (counter.check()) {
-                                        deleteAllDone = true;   //确认删除超时则认为删除完成，返回
-                                        setNeedRecycle(true);
-                                        globalActionBack();
-                                        break;
-                                    }
-                                }
+                            } else if (isModeMyJoinGroup()) {//我加入的模式
+                                LogUtil.d(TAG, "模式：我加入的");
+                                boolean textNodeAndClickParent = findTextNodeAndClickParent(h5PcContainerNode, strUserName);//查
                             }
                         }
                     }
@@ -489,6 +514,37 @@ public class HandlerService extends IntentService {
             }
         }
         LogUtil.d(TAG, "handlerMyGroupDelete end!!!!");
+    }
+
+    boolean isModeMyGroup() {
+        return work_mode == utils.n_mode_my_group;
+    }
+
+    boolean isModeMyJoinGroup() {
+        return work_mode == utils.n_mode_my_join_group;
+    }
+
+    boolean isModeMsg() {
+        return work_mode == utils.n_mode_msg;
+    }
+
+    boolean findTextNodeAndClickParent(AccessibilityNodeInfo h5PcContainerNode, final String strNodeText) {//通过名称寻找节点，节点不能点击，点击父亲
+        AccessibilityNodeInfo nodeInfo = recursionFindNodeCompare(h5PcContainerNode, new INodeCompare() {
+            @Override
+            public boolean compare(AccessibilityNodeInfo node) {
+                if (!node.isClickable()) {
+                    if (getNodeText(node).equals(strNodeText)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+        if (nodeInfo != null) {
+            performActionClickParent(nodeInfo);
+            return true;
+        }
+        return false;
     }
 
     AccessibilityNodeInfo findNotFileNodeRecursion(AccessibilityNodeInfo h5PcContainerNode) {
@@ -623,6 +679,26 @@ public class HandlerService extends IntentService {
         return null;
     }
 
+    public AccessibilityNodeInfo recursionFindNodeCompare(AccessibilityNodeInfo info, INodeCompare compare) {
+        if (info.getChildCount() == 0) {
+            LogUtil.d(TAG, "ClassName:" + info.getClassName() + " Text：" + info.getText());
+            if (compare.compare(info)) {
+                return info;
+            }
+            return null;
+        } else {
+            for (int i = 0; i < info.getChildCount(); i++) {
+                if(info.getChild(i)!=null){
+                    AccessibilityNodeInfo tinfo = recursionFindNodeCompare(info.getChild(i), compare);
+                    if (tinfo != null) {
+                        return tinfo;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public AccessibilityNodeInfo recursionFindNodeText(AccessibilityNodeInfo info, String strNodeText) {
         if (info.getChildCount() == 0) {
             //LogUtil.i(TAG, "child widget----------------------------" + info.getClassName());
@@ -720,7 +796,7 @@ public class HandlerService extends IntentService {
         AccessibilityNodeInfo avatarNode = findAvatarNode(root);
         if (avatarNode != null) {
             performActionClick(avatarNode);
-            int timeoutCount = 0;
+            TimesCounter timesCounter = new TimesCounter(50);
             while (strUserName == null) {
                 root = mService.getRootInActiveWindow();
                 AccessibilityNodeInfo userNameNode = findUserNameNode(root);
@@ -731,7 +807,7 @@ public class HandlerService extends IntentService {
                     }
                 }
                 utils.sleep(500);
-                if (timeoutCount++ > 50) {
+                if (timesCounter.check()) {
                     break;
                 }
             }
@@ -755,7 +831,11 @@ public class HandlerService extends IntentService {
     }
 
     void performActionClick(AccessibilityNodeInfo node) {
-        node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        try {
+            node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+        } catch (Throwable t) {
+            LogUtil.e(TAG, "performActionClick except:" + utils.getStackTrace());
+        }
     }
 
     void performActionClickParent(AccessibilityNodeInfo node) {//递归点击，如果不能点击，点击父亲
