@@ -17,6 +17,9 @@ public class DeleteService extends AccessibilityService {
                 HandlerService.startVithService(this);
                 break;
         }
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {//界面更新时才去读取配置
+            HandlerService.settingUpdate(this);
+        }
     }
 
     @Override

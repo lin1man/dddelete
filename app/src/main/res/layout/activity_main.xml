@@ -6,14 +6,35 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="系统设置找到辅助功能(无障碍)\n\n启用ddFileDelete\n\n打开钉钉等待软件自动删除文件\n\n不同手机可能存在兼容性问题\n\n若界面长时间卡死，请手动点击一下返回，程序将继续工作"
-        android:textSize="30sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/reset"
+                android:id="@+id/btnReset"/>
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/logon"
+                android:id="@+id/btnLogSwitch"/>
+        </LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="系统设置找到辅助功能(无障碍)\n\n启用ddFileDelete\n\n打开钉钉等待软件自动删除文件\n\n不同手机可能存在兼容性问题\n\n若界面长时间卡死，请手动点击一下返回，程序将继续工作"
+            android:textSize="30sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>
