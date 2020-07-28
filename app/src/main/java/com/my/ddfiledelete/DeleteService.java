@@ -9,7 +9,7 @@ public class DeleteService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        Log.d(TAG, event.toString());
+        LogUtil.d(TAG, event.toString());
         int eventType = event.getEventType();
         switch (eventType) {
             case AccessibilityEvent.TYPES_ALL_MASK:
